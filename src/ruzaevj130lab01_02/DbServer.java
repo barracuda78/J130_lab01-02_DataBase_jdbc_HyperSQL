@@ -6,19 +6,49 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 
 public class DbServer implements  IDbService{
-    public static final String URL = "jdbc:hsqldb:file:../projdatabase/test3"; 
-    private static final String USER = "root";
-    private static final String PASSWORD = "root";
+//    public static final String URL = "jdbc:hsqldb:file:../projdatabase/test3";  
+//    private static final String USER = "root";
+//    private static final String PASSWORD = "root";
+    public static String URL;  
+    private static String USER;
+    private static String PASSWORD;
     private static String QUERY;
     
     private Connection connection;
     private PreparedStatement pst;
+    
+    //инициализация полей в конструкторе значениями из файла .properties:
+    public DbServer(){
+        connection = Connector.getConnection();
+        Properties properties = Connector.getProperties();
+        
+        
+        for(Map.Entry<Object, Object> pair : properties.entrySet()){
+            String key = (String)pair.getKey();
+            String value = (String)pair.getValue();
+            
+            if(key.equals("url")){
+                URL = value;
+            }else if(key.equals("user")){
+                USER = value;
+            }else if(key.equals("password")){
+                PASSWORD = value;
+            }
+            //проверка:
+            System.out.println(key + " : " + value);
+        }
+    }
     
 
  /**
@@ -178,13 +208,14 @@ public class DbServer implements  IDbService{
                 
                 //теперь обновляю автора (по id автора):
                 QUERY = "UPDATE Authors SET auth_name = ?, auth_note = ? WHERE auth_id = ?;";
-                pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                pst.setString(1, author.getAuthor());
-                pst.setString(2, author.getNotes());
-                pst.setInt(3, author.getAuthor_id());
+                //для обновления автора создаю новую переменную и новый PreparedStatement, тк старый уже отработал:
+                PreparedStatement pst2 = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                pst2.setString(1, author.getAuthor());
+                pst2.setString(2, author.getNotes());
+                pst2.setInt(3, author.getAuthor_id());
                 
-                pst.execute();
-                int m = pst.getUpdateCount();
+                pst2.execute();
+                int m = pst2.getUpdateCount();
                 System.out.println("Количество обновленных элементов в таблице Authors: = " + m);
                 
             }catch(SQLException ex){
@@ -224,9 +255,68 @@ public class DbServer implements  IDbService{
             connection = DriverManager.getConnection(URL, user, password);
 
         } catch (SQLException ex) {
-            System.out.println("Error 2: " + ex.getMessage());
+            System.out.println("Error 2: Соединение не установлено. " + ex.getMessage());
         }
     }
+    
+    //просмотр списка авторов и вывод их в консоль:
+    protected void checkTable(String tableName){
+        //устанавливаем соединение:
+        setConnection(USER, PASSWORD);
+        
+        if(tableName.equals("Authors")){
+            QUERY = "SELECT * FROM Authors;";
+        }else if(tableName.equals("Documents"))
+            QUERY = "SELECT * FROM Documents;";
+        try {
+            Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+
+            boolean b = statement.execute(QUERY);
+            if(b){
+                    ResultSet rs = statement.getResultSet();
+                    System.out.println("Получили ResultSet (Выборку)");
+                    printResult(rs, tableName);
+                }
+            
+        } catch (SQLException ex) {
+            System.out.println("4: Statement не создано");
+        }
+        
+        closeConnection();
+    }
+    
+    //метод вывода полученного resultSet в консоль:
+    private void printResult(ResultSet rs, String tableName){
+        try{
+            if(rs != null){
+                while (rs.next()){
+                    if(tableName.equals("Authors")){
+                        //для таблицы Authors:
+                        System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("auth_name") + ". note = " + rs.getString("auth_note"));
+                    }else if(tableName.equals("Documents")){
+                        //для таблицы Documents:
+                        System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("doc_name") + ". text = " + rs.getString("doc_text") + ". date = " + rs.getDate("doc_date") + ". doc_author_id = " + rs.getInt("doc_author_id"));
+                    }
+                }
+            }
+        }catch(SQLException ex){
+            System.out.println("5: ResultSet не напечатан. " + ex.getMessage());
+        }
+    }    
+    
+    //метод для закрытия соединения:
+    private void closeConnection(){
+        try {
+            if(connection != null && !connection.isClosed()){
+                connection.close();
+                System.out.println("6. Соединение закрыто");
+            }
+        } catch (SQLException ex) {
+                //Logger.getLogger(DataBase.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("6: Ошибка закрытия соединения. " + ex.getMessage());
+        }
+    }    
+    
     
     
 }

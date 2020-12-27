@@ -19,6 +19,7 @@ public class DataBase {
     private static final String QUERY01 = "INSERT INTO Authors (auth_id, auth_name) VALUES (1, 'Arnold Grey');";
     private static final String QUERY02 = "INSERT INTO Authors (auth_id, auth_name, auth_note) VALUES (2, 'Tom Hawkins', 'new author');";
     private static final String QUERY03 = "INSERT INTO Authors (auth_id, auth_name) VALUES (3, 'Jim Beam');";
+    private static final String QUERY04 = "INSERT INTO Authors (auth_id, auth_name) VALUES (4, 'Test Author');";
     private static final String QUERY0TEST = "SELECT * FROM Authors;";
     
     private static final String QUERY10 = "CREATE TABLE Documents ("
@@ -107,9 +108,9 @@ public class DataBase {
             if(rs != null){
                 while (rs.next()){
                     //для таблицы Authors:
-                    //System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("auth_name") + ". note = " + rs.getString("auth_note"));
+                    System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("auth_name") + ". note = " + rs.getString("auth_note"));
                     //для таблицы Documents:
-                    System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("doc_name") + ". text = " + rs.getString("doc_text") + ". date = " + rs.getDate("doc_date") + ". doc_author_id = " + rs.getInt("doc_author_id"));
+                    //System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("doc_name") + ". text = " + rs.getString("doc_text") + ". date = " + rs.getDate("doc_date") + ". doc_author_id = " + rs.getInt("doc_author_id"));
                 }
             }
         }catch(SQLException ex){
@@ -135,7 +136,7 @@ public class DataBase {
            demo.checkDriver();
            demo.setConnection("root", "root");
            demo.setStatement();
-           demo.executeQuery(new String[] {QUERY30});
+           demo.executeQuery(new String[] {QUERY0TEST});
            demo.closeConnection();
         //Driver d = DriverManager.getDriver("");
     }
