@@ -5,12 +5,13 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+
+/*
+Утилитарный класс для загрузки драйвера, получения параметров соединения из файла .properties и создания соединения.
+Используется в конструкторе класса DbServer;
+*/
 public class Connector {
     private static Connection connection;
     
@@ -73,8 +74,4 @@ public class Connector {
         }
     }
     
-    //тестирование
-    public static void main(String[] args) {
-        Connection connection = Connector.getConnection();
-    }
 }

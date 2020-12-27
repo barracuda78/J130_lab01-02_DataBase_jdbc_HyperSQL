@@ -9,7 +9,8 @@ import java.sql.Statement;
 import java.util.Enumeration;
 
 /*
-Класс для заполнения базы данных и для проверки. Использую для отладки. А.Рузаев.
+Только для тестирования и отладки:
+Класс для заполнения базы данных и для проверки. Использую для отладки.
 */
 public class DataBase {
     public static final String URL = "jdbc:hsqldb:file:../projdatabase/test3"; 

@@ -2,13 +2,17 @@
 package ruzaevj130lab01_02;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -28,7 +32,7 @@ public class DbServer implements  IDbService{
     private Connection connection;
     private PreparedStatement pst;
     
-    //инициализация полей в конструкторе значениями из файла .properties:
+    //инициализация полей в конструкторе значениями из файла database.properties: лежит в пакете resources
     public DbServer(){
         connection = Connector.getConnection();
         Properties properties = Connector.getProperties();
@@ -78,6 +82,14 @@ public class DbServer implements  IDbService{
                 QUERY = "INSERT INTO Authors (auth_id, auth_name, auth_note) VALUES (?, ?, ?);";
                 pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 
+                /////////////ПРОВЕРКА
+                DatabaseMetaData m = connection.getMetaData();
+                boolean bool = m.supportsResultSetConcurrency(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                System.out.println("supportsResultSetConcurrency = " + bool);
+            
+                /////////////
+                
+                
                 pst.setInt(1, author.getAuthor_id());
                 pst.setString(2, author.getAuthor());
                 pst.setString(3, author.getNotes());
@@ -124,14 +136,18 @@ public class DbServer implements  IDbService{
         }
             
         //теперь выполняем PreparedStatement и получаем кол-во обновленных элементов:
-            try {
-                pst.execute();
-                int n = pst.getUpdateCount();
-                System.out.println("Количество обновленных элементов = " + n);
-            } catch (SQLException ex) {
-                System.out.println("Error 1-3: " + ex.getMessage());
-                throw new DocumentException("Ошибка выполнения выражения execute prepared statement");
-            }
+        try {
+            pst.execute();
+            int n = pst.getUpdateCount();
+            System.out.println("Количество обновленных элементов = " + n);
+        } catch (SQLException ex) {
+            System.out.println("Error 1-3: " + ex.getMessage());
+            throw new DocumentException("Ошибка выполнения выражения execute prepared statement");
+        }
+        
+        //теперь закрываем соединение:
+        closeConnection();
+            
         return b;    
     }
 
@@ -160,7 +176,7 @@ public class DbServer implements  IDbService{
             try{
             setConnection(USER, PASSWORD);
             QUERY = "INSERT INTO Documents (doc_id, doc_name, doc_text, doc_date, doc_author_id) VALUES (?, ?, ?, ?, ?);";
-            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);            
             
             pst.setInt(1, doc.getDocument_id());
             pst.setString(2, doc.getTitle());
@@ -218,6 +234,11 @@ public class DbServer implements  IDbService{
                 int m = pst2.getUpdateCount();
                 System.out.println("Количество обновленных элементов в таблице Authors: = " + m);
                 
+                
+                //теперь закрываю соединение:
+                closeConnection();
+                
+                
             }catch(SQLException ex){
                 System.out.println("Error 2-2: " + ex.getMessage());
                 throw new DocumentException("Ошибка обновления документа/автора в базе");
@@ -259,7 +280,7 @@ public class DbServer implements  IDbService{
         }
     }
     
-    //просмотр списка авторов и вывод их в консоль:
+    //просмотр списка авторов/документов и вывод их в консоль:
     protected void checkTable(String tableName){
         //устанавливаем соединение:
         setConnection(USER, PASSWORD);
@@ -302,7 +323,39 @@ public class DbServer implements  IDbService{
         }catch(SQLException ex){
             System.out.println("5: ResultSet не напечатан. " + ex.getMessage());
         }
-    }    
+    } 
+    
+    //Усовершенствованный метод вывода полученного resultSet в консоль: используется ResultSetMetaData: просто потренироваться:
+    private void printResult(ResultSet rs){
+        try {
+            if(rs != null){
+                ResultSetMetaData md = rs.getMetaData();
+                int columns = md.getColumnCount();
+                
+                List<String> columnNames = new ArrayList<>();
+                for(int i = 0; i < columns; i++){
+                    columnNames.add(md.getColumnName(i));
+                }
+                
+                for(String s : columnNames){
+                    System.out.println("Колонка: " + s);
+                }
+                
+//                if(columns == 3){
+//                    //значит это таблица Authors:
+//                    //System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("auth_name") + ". note = " + rs.getString("auth_note"));
+//                    System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString(columnNames.get(1)) + ". note = " + rs.getString(columnNames.get(2)));
+//                }else{
+//                    //значит это таблица Documents:
+//                    System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("doc_name") + ". text = " + rs.getString("doc_text") + ". date = " + rs.getDate("doc_date") + ". doc_author_id = " + rs.getInt("doc_author_id"));
+//                }
+            }
+            
+        } catch (SQLException ex) {
+            System.out.println("Не удалось получить объект ResultSetMetaData.");
+        }
+        
+    }
     
     //метод для закрытия соединения:
     private void closeConnection(){
@@ -315,8 +368,28 @@ public class DbServer implements  IDbService{
                 //Logger.getLogger(DataBase.class.getName()).log(Level.SEVERE, null, ex);
                 System.out.println("6: Ошибка закрытия соединения. " + ex.getMessage());
         }
-    }    
+    }   
     
     
-    
+    /**
+    * вспомогательный метод - для получения списка всех таблиц пользователя из БД.
+    * Выводит список в консоль.
+    * @return список строк - названий таблиц пользователя в БД.
+    */
+    public List<String> getAllUsersTables(){
+        List<String> tables = new ArrayList<>();
+        try {
+            connection = Connector.getConnection();
+            DatabaseMetaData databaseMetaData = connection.getMetaData();
+            ResultSet resultSet = databaseMetaData.getTables(null, null, null, new String[]{"TABLE"});
+            while(resultSet.next()){
+                tables.add(resultSet.getString("TABLE_NAME"));
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DbServer.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        tables.stream().forEach(System.out::println);
+        closeConnection();
+        return tables;
+    }
 }
