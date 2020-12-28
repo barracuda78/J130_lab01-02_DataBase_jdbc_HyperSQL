@@ -1,6 +1,6 @@
 package ruzaevj130lab01_02;
 
-import java.util.List;
+import java.util.HashMap;
 
 public class Main {
     public static void main(String[] args) {
@@ -17,10 +17,13 @@ public class Main {
         
         System.out.println("Таблица Authors:");
         db.checkTable("Authors");
-        System.out.println("Таблица Documents:");
-        db.checkTable("Documents");
-        System.out.println("Все пользовательские таблицы в этой БД:");
-        db.getAllUsersTables();
-        
+//        System.out.println("Таблица Documents:");
+//        db.checkTable("Documents");
+//        System.out.println("Все пользовательские таблицы в этой БД:");
+//        db.getAllUsersTables();
+
+//          HashMap<String, String> map = db.getQueries();
+          
+
     }
 }

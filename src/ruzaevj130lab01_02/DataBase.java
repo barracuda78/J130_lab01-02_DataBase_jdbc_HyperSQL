@@ -14,6 +14,7 @@ import java.util.Enumeration;
 */
 public class DataBase {
     public static final String URL = "jdbc:hsqldb:file:../projdatabase/test3"; 
+    public static final String DERBY_URL = "jdbc:derby://localhost:1527/test4"; 
     private Connection con;
     private Statement st;
     private static final String QUERY00 = "CREATE TABLE Authors (auth_id INTEGER PRIMARY KEY, auth_name VARCHAR(64) NOT NULL, auth_note VARCHAR(255));";
@@ -45,11 +46,12 @@ public class DataBase {
         Enumeration<Driver> e = DriverManager.getDrivers();
         while(e.hasMoreElements()){
             Driver d = e.nextElement();
-            //System.out.println(d.getClass().getCanonicalName());
+            System.out.println(d.getClass().getCanonicalName());
         }
         
         try {
-            Driver d = DriverManager.getDriver(URL);
+            //Driver d = DriverManager.getDriver(URL);
+            Driver d = DriverManager.getDriver(DERBY_URL);
             System.out.println("1. Драйвер проверен: " + d.getClass().getCanonicalName());
         } catch (SQLException ex) {
             //Logger.getLogger(DataBase.class.getName()).log(Level.SEVERE, null, ex);

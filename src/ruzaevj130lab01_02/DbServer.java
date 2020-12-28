@@ -1,6 +1,14 @@
 
 package ruzaevj130lab01_02;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -12,6 +20,7 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -283,25 +292,39 @@ public class DbServer implements  IDbService{
     //просмотр списка авторов/документов и вывод их в консоль:
     protected void checkTable(String tableName){
         //устанавливаем соединение:
-        setConnection(USER, PASSWORD);
+        //setConnection(USER, PASSWORD);
+        connection = null;
+        connection = Connector.getConnection();
         
         if(tableName.equals("Authors")){
-            QUERY = "SELECT * FROM Authors;";
+            QUERY = "SELECT * FROM Authors";
         }else if(tableName.equals("Documents"))
-            QUERY = "SELECT * FROM Documents;";
+            QUERY = "SELECT * FROM Documents";
+        Statement statement = null;
         try {
-            Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-
-            boolean b = statement.execute(QUERY);
-            if(b){
-                    ResultSet rs = statement.getResultSet();
-                    System.out.println("Получили ResultSet (Выборку)");
-                    printResult(rs, tableName);
-                }
-            
+            statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
         } catch (SQLException ex) {
-            System.out.println("4: Statement не создано");
+            System.out.println("3: Statement не создано");
         }
+            boolean b = false;
+        try {
+            b = statement.execute(QUERY);
+        } catch (SQLException ex) {
+            System.out.println("4: Statement не execut'нулось");
+            System.out.println("ex.getMessage() = " + ex.getMessage());
+            ex.printStackTrace();
+        }
+
+            if(b){
+                ResultSet rs = null;
+                try {
+                    rs = statement.getResultSet();
+                } catch (SQLException ex) {
+                    System.out.println("5: ResultSet не получен.");
+                }
+                System.out.println("Получили ResultSet (Выборку)");
+                printResult(rs, tableName);
+            }
         
         closeConnection();
     }
@@ -386,10 +409,43 @@ public class DbServer implements  IDbService{
                 tables.add(resultSet.getString("TABLE_NAME"));
             }
         } catch (SQLException ex) {
-            Logger.getLogger(DbServer.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("Не удалось получить объект DatabaseMetaData.");
         }
         tables.stream().forEach(System.out::println);
         closeConnection();
         return tables;
     }
+    
+    /**
+    * вспомогательный метод - для получения списка всех заранее подготовленных SQL запросов
+    * из файла queries.sql в пакете resources.
+    * Выводит список в консоль.
+    * @return список всех заранее подготовленных SQL запросов.
+    */
+    protected HashMap<String, String> getQueries(){
+        List<String> queries = new ArrayList<>();
+       
+        Path path = Paths.get("D:\\coding\\politeh\\RuzaevJ130Lab01\\src\\resources\\queries.txt");
+
+        try(BufferedReader br = new BufferedReader(new FileReader(new File(path.toString())))){
+            while(br.ready()){
+                queries.add(br.readLine());
+            }
+        }catch(IOException ex){
+            System.out.println("Ошибка чтения из файла resources/queries.txt");
+        }
+        
+        HashMap<String, String> map = new HashMap<>();
+        
+        for(String s : queries){
+            String key = s.substring(0, s.indexOf("="));
+            String value = s.substring(s.indexOf("=") + 1);
+            
+            map.put(key, value);
+            System.out.println(key + " : " + value);
+        }
+              
+        return map;
+    }
+    
 }

@@ -65,7 +65,8 @@ public class Connector {
     //метод для загрузки драйвера:
     private static boolean loadDriver(){
         try {
-            Class.forName("org.hsqldb.jdbcDriver");
+            //Class.forName("org.hsqldb.jdbcDriver");
+            Class.forName("org.apache.derby.jdbc.ClientDriver");
             System.out.println("Драйвер загружен");
             return true;
         } catch (ClassNotFoundException ex) {
