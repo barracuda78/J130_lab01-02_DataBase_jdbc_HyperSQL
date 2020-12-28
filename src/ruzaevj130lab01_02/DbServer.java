@@ -87,16 +87,17 @@ public class DbServer implements  IDbService{
         if(author.getAuthor() != null && author.getAuthor_id() != 0){
             try {
                 //значит это новый автор, записываем его в базу:
-                setConnection(USER, PASSWORD);
-                QUERY = "INSERT INTO Authors (auth_id, auth_name, auth_note) VALUES (?, ?, ?);";
+                //setConnection(USER, PASSWORD);
+                connection = Connector.getConnection();
+                QUERY = "INSERT INTO Authors (auth_id, auth_name, auth_note) VALUES (?, ?, ?)";
                 pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 
-                /////////////ПРОВЕРКА
-                DatabaseMetaData m = connection.getMetaData();
-                boolean bool = m.supportsResultSetConcurrency(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                System.out.println("supportsResultSetConcurrency = " + bool);
-            
-                /////////////
+                /////////////ПРОВЕРКА работоспособности ResultSetConcurrency в HSQL//////////////////
+//                DatabaseMetaData m = connection.getMetaData();
+//                boolean bool = m.supportsResultSetConcurrency(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+//                System.out.println("supportsResultSetConcurrency = " + bool);
+//            
+                //////////////КОНЕЦ ПРОВЕРКИ//////////////////////////////////////////////////////////
                 
                 
                 pst.setInt(1, author.getAuthor_id());
@@ -112,9 +113,10 @@ public class DbServer implements  IDbService{
         }else if(author.getAuthor() == null && author.getAuthor_id() != 0){
             try {
                 //тогда ищем автора по id и обновляем ему поля.
-                setConnection(USER, PASSWORD);
+                //setConnection(USER, PASSWORD);
+                connection = Connector.getConnection();
                 //даже если auth_note == null:
-                QUERY = "UPDATE Authors SET auth_note = ? WHERE auth_id = ?;";
+                QUERY = "UPDATE Authors SET auth_note = ? WHERE auth_id = ?";
                 pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 
                 pst.setString(1, author.getNotes());
@@ -128,9 +130,10 @@ public class DbServer implements  IDbService{
         }else if(author.getAuthor() != null && author.getAuthor_id() == 0){
             try {
                 //тогда ищем автора по ИМЕНИ!!! и обновляем ему поля.
-                setConnection(USER, PASSWORD);
+                //setConnection(USER, PASSWORD);
+                connection = Connector.getConnection();
                 //даже если auth_note == null:
-                QUERY = "UPDATE Authors SET auth_note = ? WHERE auth_name = ?;";
+                QUERY = "UPDATE Authors SET auth_note = ? WHERE auth_name = ?";
                 pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 
                 pst.setString(1, author.getNotes());
@@ -183,8 +186,9 @@ public class DbServer implements  IDbService{
         //обязательные поля автора: author_id, author;
         if(doc.getDocument_id() !=0 && doc.getTitle() != null && doc.getDate() != null && doc.getAuthor_id() != 0 && author.getAuthor() != null && author.getAuthor_id() != 0){
             try{
-            setConnection(USER, PASSWORD);
-            QUERY = "INSERT INTO Documents (doc_id, doc_name, doc_text, doc_date, doc_author_id) VALUES (?, ?, ?, ?, ?);";
+            //setConnection(USER, PASSWORD);
+            connection = Connector.getConnection();
+            QUERY = "INSERT INTO Documents (doc_id, doc_name, doc_text, doc_date, doc_author_id) VALUES (?, ?, ?, ?, ?)";
             pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);            
             
             pst.setInt(1, doc.getDocument_id());
@@ -211,10 +215,11 @@ public class DbServer implements  IDbService{
             //если не все обязательные поля заполнены,
             //но заполнен id документа и id автора: обновляю ВСЕ поля кроме id в обеих таблицах:
             try{
-                setConnection(USER, PASSWORD);
+                //setConnection(USER, PASSWORD);
+                connection = Connector.getConnection();
                 //ПРИМЕР множественного обновления полей : UPDATE goods SET title = "утюг", price = 300 WHERE num = 2
                 //обновляю документы:
-                QUERY = "UPDATE Documents SET doc_name = ?, doc_text = ?, doc_date = ? WHERE doc_id = ?;";
+                QUERY = "UPDATE Documents SET doc_name = ?, doc_text = ?, doc_date = ? WHERE doc_id = ?";
                 
                 pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 pst.setString(1, doc.getTitle());
@@ -232,7 +237,7 @@ public class DbServer implements  IDbService{
                 System.out.println("Количество обновленных элементов в таблице Documents: = " + n);
                 
                 //теперь обновляю автора (по id автора):
-                QUERY = "UPDATE Authors SET auth_name = ?, auth_note = ? WHERE auth_id = ?;";
+                QUERY = "UPDATE Authors SET auth_name = ?, auth_note = ? WHERE auth_id = ?";
                 //для обновления автора создаю новую переменную и новый PreparedStatement, тк старый уже отработал:
                 PreparedStatement pst2 = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                 pst2.setString(1, author.getAuthor());
@@ -276,7 +281,8 @@ public class DbServer implements  IDbService{
         throw new DocumentException();
     }
     
-    //вспомогательные методы:
+    ///////////////////////////////////////////вспомогательные методы://////////////////////////////////////////
+    
     //1. - загрузка драйвера - через систему.
     //2.
     private void setConnection (String user, String password){
@@ -289,11 +295,11 @@ public class DbServer implements  IDbService{
         }
     }
     
-    //просмотр списка авторов/документов и вывод их в консоль:
+    //просмотр таблицы авторов/документов и вывод строк таблицы в консоль:
     protected void checkTable(String tableName){
         //устанавливаем соединение:
         //setConnection(USER, PASSWORD);
-        connection = null;
+        //connection = null;
         connection = Connector.getConnection();
         
         if(tableName.equals("Authors")){
