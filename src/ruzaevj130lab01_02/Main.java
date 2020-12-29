@@ -49,14 +49,26 @@ public class Main {
 //        }
 
 
+
         //тестирование метода findDocumentByAuthor()
-        try {
-            System.out.println("Все документы по автору: " + jv);
-            Document[] d = db.findDocumentByAuthor(jv);
-            Arrays.stream(d).forEach(System.out::println);
-        } catch (DocumentException ex) {
-            System.out.println("ошибка в методе findDocumentByAuthor(): " + ex.getMessage());
-        }
+//        try {
+//            System.out.println("Все документы по автору: " + jv);
+//            Document[] d = db.findDocumentByAuthor(jv);
+//            Arrays.stream(d).forEach(System.out::println);
+//        } catch (DocumentException ex) {
+//            System.out.println("ошибка в методе findDocumentByAuthor(): " + ex.getMessage());
+//        }
+
+
+
+          //Тестирование метода findDocumentByContent():
+//        try {
+//            System.out.println("Поиск документов по содержимому: ");
+//            Document[] d = db.findDocumentByContent("First");
+//            Arrays.stream(d).forEach(System.out::println);
+//        } catch (DocumentException ex) {
+//            System.out.println("ошибка в методе findDocumentByContent(): " + ex.getMessage());
+//        }
 
         
 //        //Содержимое таблицы Authors:

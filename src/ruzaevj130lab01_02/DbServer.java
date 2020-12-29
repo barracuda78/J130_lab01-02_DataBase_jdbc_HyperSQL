@@ -19,13 +19,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 
@@ -408,9 +410,44 @@ public class DbServer implements  IDbService{
     }
 
     
+     /**
+    * Метод производит поиск документов по их содержанию.
+    * @param content фрагмент текста (ключевые слова), который должен
+    * содержаться в заголовке или в основном тексте документа.
+    * @return возвращает массив найденных документов.Если в базе данных не
+    * найдено ни одного документа, удовлетворяющего условиям поиска, то
+    * возвращается значение null.
+    * @throws DocumentException выбрасывается в случае, если строка content
+    * равна null или является пустой. Данное исключение также выбрасывается в
+    * случае общей ошибки доступа к базе данных
+    */
     @Override
     public Document[] findDocumentByContent(String content) throws DocumentException {
-        throw new DocumentException();
+        if(content == null || "".equals(content)){
+            throw new DocumentException("передаваемая строка - пустая или null");
+        }
+        //получаю воообще все документы из БД:
+        List<Element> allElements = checkTable("Documents");
+        
+        //фильтрую все документы и получаю два листа - фильтр по содержимому из названия и из текста:
+        List<Element> listFromTitle = allElements.stream().filter(e -> ((Document)e).getTitle().contains(content)).collect(Collectors.toList());
+
+        List<Element> listFromText = allElements.stream().filter(e -> ((Document)e).getText().contains(content)).collect(Collectors.toList());
+
+        //объединяю оба листа в один сет, таким образом ибавляясь от дублей.
+        Set<Element> set = new HashSet<>();
+        set.addAll(listFromTitle);
+        set.addAll(listFromText);
+        
+        //содержимое сет записываю в массив:
+        Document[] documents = new Document[set.size()];
+        int i = 0;
+        for(Element e : set){
+            documents[i] = (Document)e;
+            i++;
+        }
+        
+        return documents;
     }
 
     @Override
