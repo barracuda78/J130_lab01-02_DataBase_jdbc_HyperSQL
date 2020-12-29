@@ -83,8 +83,8 @@ public class DbServer implements  IDbService{
     @Override
     public boolean addAuthor(Author author) throws DocumentException {
         boolean b = false; // - возвращаю из метода.
-        //если поле имя автора не инициализировано и поле id автора не инициализировано нулем по-умолчанию,
-        if(author.getAuthor() != null && author.getAuthor_id() != 0){
+        //если поле имя автора не инициализировано (и не пустая строка) и поле id автора не инициализировано нулем по-умолчанию,
+        if(author.getAuthor() != null && author.getAuthor_id() != 0 && !"".equals(author.getAuthor())){
             try {
                 //значит это новый автор, записываем его в базу:
                 //setConnection(USER, PASSWORD);
@@ -110,7 +110,7 @@ public class DbServer implements  IDbService{
                 throw new DocumentException("Ошибка записи автора в базу");
             }
             //иначе если поле имя автора не инициализировано, А поле id автора - заполнено,
-        }else if(author.getAuthor() == null && author.getAuthor_id() != 0){
+        }else if((author.getAuthor() == null || "".equals(author.getAuthor())) && author.getAuthor_id() != 0){
             try {
                 //тогда ищем автора по id и обновляем ему поля.
                 //setConnection(USER, PASSWORD);
@@ -127,7 +127,7 @@ public class DbServer implements  IDbService{
                 throw new DocumentException("Ошибка обновления автора по id");
             }
             //иначе если поле имя автора  инициализировано, А поле id автора НЕ заполнено,
-        }else if(author.getAuthor() != null && author.getAuthor_id() == 0){
+        }else if((author.getAuthor() != null && !"".equals(author.getAuthor())) && author.getAuthor_id() == 0){
             try {
                 //тогда ищем автора по ИМЕНИ!!! и обновляем ему поля.
                 //setConnection(USER, PASSWORD);
@@ -184,7 +184,7 @@ public class DbServer implements  IDbService{
         //если все обязательные поля объектов doc и author определены - добавляю новый документ к базе данных:
         //обязательные поля документа: document_id, title, date, author_id;
         //обязательные поля автора: author_id, author;
-        if(doc.getDocument_id() !=0 && doc.getTitle() != null && doc.getDate() != null && doc.getAuthor_id() != 0 && author.getAuthor() != null && author.getAuthor_id() != 0){
+        if(doc.getDocument_id() !=0 && (doc.getTitle() != null && !"".equals(doc.getTitle())) && doc.getDate() != null && doc.getAuthor_id() != 0 && (author.getAuthor() != null && !"".equals(author.getAuthor())) && author.getAuthor_id() != 0){
             try{
             //1. если такого автора нет в таблице Authors - сначала добавляю Автора в таблицу Authors.
             if(!isElementInTable(author, "Authors")){
@@ -199,12 +199,7 @@ public class DbServer implements  IDbService{
             pst.setString(2, doc.getTitle());
             pst.setString(3, doc.getText());
             //преобразую java.util.Date в java.sql.Date:
-            Date date = doc.getDate();
-            date.setYear(date.getYear() - 1900); // --------------------> уйти от проблемы разницы во времени в 1900 лет.
-            SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-dd");
-            //String s = sdf.format(date);
-            //java.sql.Date sqlDate = java.sql.Date.valueOf(s);
-            java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+            java.sql.Date sqlDate = utilToSqlDate(doc.getDate());  //----------------------> вспомогательный метод внизу класса.
             pst.setDate(4, sqlDate);
             pst.setInt(5, doc.getAuthor_id());
             
@@ -235,10 +230,7 @@ public class DbServer implements  IDbService{
                 pst.setString(1, doc.getTitle());
                 pst.setString(2, doc.getText());
                 //преобразую java.util.Date в java.sql.Date:
-                Date date = doc.getDate();
-                SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-dd");
-                String s = sdf.format(date);
-                java.sql.Date sqlDate = java.sql.Date.valueOf(s);
+                java.sql.Date sqlDate = utilToSqlDate(doc.getDate());  //----------------------> вспомогательный метод внизу класса.
                 pst.setDate(3, sqlDate);
                 pst.setInt(4, doc.getDocument_id());
                 
@@ -271,11 +263,151 @@ public class DbServer implements  IDbService{
         return b;
     }
 
+    
+    /**
+    * Метод производит поиск документов по их автору.
+    *
+    * @param author автор документа. Объект может содержать неполную информацию
+    * об авторе. Например, объект может содержать только именные данные автора
+    * или только его идентификатор. 
+    * @return возвращает массив всех найденных документов. Еслив базе данных
+    * не найдено ни одного документа, то возвращается значение null.
+    * @throws DocumentException выбрасывается в случае, если поле объекта
+    * author заполнены неправильно или нелья выполнить поиск по его полям.
+    * Данное исключение также выбрасывается в случае общей ошибки доступа к базе данных
+    */
     @Override
     public Document[] findDocumentByAuthor(Author author) throws DocumentException {
-       throw new DocumentException();
+        //Создаю ссылку на массив для возвращаемого значения:
+        Document[] documents = null;
+        //буду добавлять документы из выборки в лист. Потом на основе листа создам объект Document[];
+        List<Document> list = new ArrayList<>();
+        //1. Если auth_id не 0 - ищем по ID (принимаю, что если auth_id == 0 - поле auth_id не заполнено)
+        if(author.getAuthor_id() != 0){
+            //1.1. Драйвер загружен в конструкторе.
+            //1.2. Соединение создано в конструкторе
+            //1.3. Создаю препередСтейтмент:
+            try{
+            //connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе.
+            QUERY = "SELECT Documents.doc_id, Documents.doc_name, Documents.doc_text, Documents.doc_date, Documents.doc_author_id "
+                    + "FROM Documents INNER JOIN Authors "
+                    + "ON (Documents.doc_author_id = Authors.auth_id) "
+                    + "WHERE Authors.auth_id = ?";
+            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setInt(1, author.getAuthor_id());
+            }catch(SQLException ex){
+                System.out.println("Метод findDocumentByAuthor()://1 Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.4. Выполняю препередСтейтмент:
+            try {
+                pst.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод findDocumentByAuthor()://1 Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.5. Получаю ResultSet:
+            ResultSet rs = null;
+            try {
+                rs = pst.getResultSet();
+            } catch (SQLException ex) {
+                System.out.println("Метод findDocumentByAuthor()://1 Ошибка создания resultSet");
+                ex.printStackTrace();
+            }
+            
+            //1.5.1. - обрабатываю итоги ResultSet:
+            try{
+            if(rs != null){
+                while (rs.next()){
+                    int doc_id = rs.getInt("doc_id");
+                    String doc_name = rs.getString("doc_name");
+                    String doc_text = rs.getString("doc_text");
+                    java.sql.Date sql_date = rs.getDate("doc_date");
+                    Date doc_date = sqlToUtilDate(rs.getDate("doc_date"));
+                    int doc_author_id = rs.getInt("doc_author_id");
+
+                    list.add(new Document(doc_id, doc_name, doc_text, doc_date, doc_author_id));
+                }
+            }
+            }catch(SQLException ex){
+                System.out.println("Метод findDocumentByAuthor()://1 Ошибка получения данных из resultSet");
+                ex.printStackTrace();
+            }
+        }
+        //2. иначе если имя не "" (пустая строка) и не null (ну null не может быть из-за отсутствия такого конструктора, но...) - тогда ищем по имени
+        else if(author.getAuthor() != null && !"".equals(author.getAuthor())){
+            //2.1. Драйвер загружен в конструкторе.
+            //2.2. Соединение создано в конструкторе
+            //2.3. Создаю препередСтейтмент:
+            try{
+            //connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе.
+            QUERY = "SELECT Documents.doc_id, Documents.doc_name, Documents.doc_text, Documents.doc_date, Documents.doc_author_id "
+                    + "FROM Documents INNER JOIN Authors "
+                    + "ON (Documents.doc_author_id = Authors.auth_id) "
+                    + "WHERE Authors.auth_name = ?";
+            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setString(1, author.getAuthor());
+            }catch(SQLException ex){
+                System.out.println("Метод findDocumentByAuthor()//2: Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.4. Выполняю препередСтейтмент:
+            try {
+                pst.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод findDocumentByAuthor()//2: Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.5. Получаю ResultSet:
+            ResultSet rs = null;
+            try {
+                rs = pst.getResultSet();
+            } catch (SQLException ex) {
+                System.out.println("Метод findDocumentByAuthor()://2 Ошибка создания resultSet");
+                ex.printStackTrace();
+            }
+            
+            //2.5.1. - обрабатываю итоги ResultSet:
+            try{
+            if(rs != null){
+                while (rs.next()){
+                    int doc_id = rs.getInt("doc_id");
+                    String doc_name = rs.getString("doc_name");
+                    String doc_text = rs.getString("doc_text");
+                    java.sql.Date sql_date = rs.getDate("doc_date");
+                    Date doc_date = sqlToUtilDate(rs.getDate("doc_date"));
+                    int doc_author_id = rs.getInt("doc_author_id");
+
+                    list.add(new Document(doc_id, doc_name, doc_text, doc_date, doc_author_id));
+                }
+            }
+            }catch(SQLException ex){
+                System.out.println("Метод findDocumentByAuthor()://2 Ошибка получения данных из resultSet");
+                ex.printStackTrace();
+            }
+        }
+        //3. иначе объект автор заполнен неправильно -кидаем исключение:
+        else{
+            System.out.println("Ошибка в методе findDocumentByAuthor()");
+            throw new DocumentException("Поля автора заполнены некорректно.");
+        }
+        
+        //6. теперь закрываю соединение:
+        closeConnection();
+        if(list != null){
+            documents = new Document[list.size()];
+            documents = list.toArray(documents);
+        }else{
+            System.out.println("Список авторов пуст!");
+        }
+        return documents;
     }
 
+    
     @Override
     public Document[] findDocumentByContent(String content) throws DocumentException {
         throw new DocumentException();
@@ -368,7 +500,6 @@ public class DbServer implements  IDbService{
         try{
             if(rs != null){
                 while (rs.next()){
-                    
                     if(tableName.equals("Authors")){
                         //для таблицы Authors:
                         int id = rs.getInt(1);
@@ -383,13 +514,7 @@ public class DbServer implements  IDbService{
                         int id = rs.getInt(1);
                         String docName = rs.getString("doc_name");
                         String docText = rs.getString("doc_text");
-                        java.sql.Date sqlDate = rs.getDate("doc_date");
-                        String s = sqlDate.toString();//2008-08-22
-                        int year = Integer.parseInt(s.substring(0, s.indexOf("-")));
-                        int month = Integer.parseInt(s.substring(s.indexOf("-")+1, s.lastIndexOf("-")));
-                        int day = Integer.parseInt(s.substring(s.lastIndexOf("-")));
-                        //int year, int month, int date
-                        Date date = new Date(year, month, day);
+                        Date date = sqlToUtilDate(rs.getDate("doc_date")); //вспомогательный метод - ниже в этом классе.
                         int docAuthID = rs.getInt("doc_author_id");
                         
                         //System.out.println("id = " + id + ". name = " + docName + ". text = " + docText + ". date = " + sqlDate + ". doc_author_id = " + docAuthID);
@@ -515,5 +640,42 @@ public class DbServer implements  IDbService{
     private boolean isElementInTable(Element e, String tableName){
         List<Element> elements = checkTable("Authors");
         return elements.contains(e);
+    }
+    
+    /**
+    * вспомогательный метод - для получения даты в формате java.util.Date из java.sql.Date;
+    * @param sql_date - дата в формате java.sql.Date;
+    * @return дата в формате java.util.Date, соответствующая дате аргумента переданного в виде параметра метода sql_date.
+    */    
+    private java.util.Date sqlToUtilDate(java.sql.Date sql_date) {
+        if (sql_date != null) {
+            String s = sql_date.toString();//2008-08-22
+            int year = Integer.parseInt(s.substring(0, s.indexOf("-")));
+            int month = Integer.parseInt(s.substring(s.indexOf("-") + 1, s.lastIndexOf("-")));
+            int day = Integer.parseInt(s.substring(s.lastIndexOf("-")));
+            //int year, int month, int date
+            Date doc_date = new Date(year, month, day);
+            return doc_date;
+        }else{
+            return null;
+        }
+    }
+    
+    /**
+    * вспомогательный метод - для получения даты в формате java.sql.Date из java.util.Date;
+    * @param util_date - дата в формате java.util.Date;
+    * @return дата в формате java.sql.Date, соответствующая дате аргумента переданного в виде параметра метода util_date.
+    */       
+    private java.sql.Date utilToSqlDate(java.util.Date util_date) {
+        //преобразую java.util.Date в java.sql.Date:
+        if(util_date != null){
+            util_date.setYear(util_date.getYear() - 1900); // --------------------> уйти от проблемы разницы во времени в 1900 лет.
+            //SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-dd");
+            //String s = sdf.format(date);
+            //java.sql.Date sqlDate = java.sql.Date.valueOf(s);
+            return new java.sql.Date(util_date.getTime());
+        }else{
+            return null;
+        }
     }
 }

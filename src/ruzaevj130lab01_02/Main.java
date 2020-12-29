@@ -1,8 +1,11 @@
 package ruzaevj130lab01_02;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main {
     public static void main(String[] args) {
@@ -27,12 +30,12 @@ public class Main {
 //        }
 
         //проверка добавления документа:
-        try {
-            boolean addedDocument = db.addDocument(earth_centre, jv);
-            System.out.println("Документ добавлен " + addedDocument);  //если false - значит не добавлен, а изменен.
-        } catch (DocumentException ex) {
-            System.out.println("ошибка в методе addDocument: " + ex.getMessage());
-        }
+//        try {
+//            boolean addedDocument = db.addDocument(earth_centre, jv);
+//            System.out.println("Документ добавлен " + addedDocument);  //если false - значит не добавлен, а изменен.
+//        } catch (DocumentException ex) {
+//            System.out.println("ошибка в методе addDocument: " + ex.getMessage());
+//        }
 
         //проверка изменения документа и автора
         //домумент и автор для тестирования изменеия документа и автора:
@@ -44,15 +47,26 @@ public class Main {
 //        } catch (DocumentException ex) {
 //            System.out.println("ошибка в методе addDocument: " + ex.getMessage());
 //        }
+
+
+        //тестирование метода findDocumentByAuthor()
+        try {
+            System.out.println("Все документы по автору: " + jv);
+            Document[] d = db.findDocumentByAuthor(jv);
+            Arrays.stream(d).forEach(System.out::println);
+        } catch (DocumentException ex) {
+            System.out.println("ошибка в методе findDocumentByAuthor(): " + ex.getMessage());
+        }
+
         
 //        //Содержимое таблицы Authors:
-        System.out.println("Таблица Authors:");
-        db.checkTable("Authors").stream().forEach(System.out::println);
+//        System.out.println("Таблица Authors:");
+//        db.checkTable("Authors").stream().forEach(System.out::println);
         
         
           //Содержимое таблицы Documents:
-        System.out.println("Таблица Documents:");
-        db.checkTable("Documents").stream().forEach(System.out::println);
+//        System.out.println("Таблица Documents:");
+//        db.checkTable("Documents").stream().forEach(System.out::println);
 
           //Список таблиц этой БД:  
 //        System.out.println("Все пользовательские таблицы в этой БД:");
