@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  * @author ((C)Y.D.Zakovryashin, 12.11.2020
  */
-public class Author {
+public class Author extends Element{
 
     public static final int VERSION = 79897;
     private final int author_id;
@@ -66,6 +66,11 @@ public class Author {
         final Author other = (Author) obj;
         return !(this.author_id != other.author_id
                 || !Objects.equals(this.author, other.author));
+    }
+    
+    @Override
+    public String toString(){
+        return "Author: id = " + author_id + ", name = " + author + ", note = " + notes;
     }
 
 }

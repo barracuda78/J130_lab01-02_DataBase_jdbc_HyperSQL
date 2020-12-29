@@ -186,6 +186,10 @@ public class DbServer implements  IDbService{
         //обязательные поля автора: author_id, author;
         if(doc.getDocument_id() !=0 && doc.getTitle() != null && doc.getDate() != null && doc.getAuthor_id() != 0 && author.getAuthor() != null && author.getAuthor_id() != 0){
             try{
+            //1. если такого автора нет в таблице Authors - сначала добавляю Автора в таблицу Authors.
+            if(!isElementInTable(author, "Authors")){
+                addAuthor(author);
+            }
             //setConnection(USER, PASSWORD);
             connection = Connector.getConnection();
             QUERY = "INSERT INTO Documents (doc_id, doc_name, doc_text, doc_date, doc_author_id) VALUES (?, ?, ?, ?, ?)";
@@ -196,12 +200,18 @@ public class DbServer implements  IDbService{
             pst.setString(3, doc.getText());
             //преобразую java.util.Date в java.sql.Date:
             Date date = doc.getDate();
+            date.setYear(date.getYear() - 1900); // --------------------> уйти от проблемы разницы во времени в 1900 лет.
             SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-dd");
-            String s = sdf.format(date);
-            java.sql.Date sqlDate = java.sql.Date.valueOf(s);
+            //String s = sdf.format(date);
+            //java.sql.Date sqlDate = java.sql.Date.valueOf(s);
+            java.sql.Date sqlDate = new java.sql.Date(date.getTime());
             pst.setDate(4, sqlDate);
             pst.setInt(5, doc.getAuthor_id());
             
+            pst.execute();
+            int n = pst.getUpdateCount();
+            System.out.println("Количество обновленных элементов в таблице Documents: = " + n);
+
             b = true;
             
             }catch(SQLException ex){
@@ -284,7 +294,7 @@ public class DbServer implements  IDbService{
     ///////////////////////////////////////////вспомогательные методы://////////////////////////////////////////
     
     //1. - загрузка драйвера - через систему.
-    //2.
+    //2. - установка соединения - этот метод не использую, делаю через статический метод класса Connector.
     private void setConnection (String user, String password){
         try {
             System.out.println("2. Соединение установлено.");
@@ -295,63 +305,103 @@ public class DbServer implements  IDbService{
         }
     }
     
-    //просмотр таблицы авторов/документов и вывод строк таблицы в консоль:
-    protected void checkTable(String tableName){
+    /**
+    * просмотр таблицы авторов/документов и вывод строк таблицы в консоль
+    * Выводит список в консоль.
+    * @param tableName - название таблицы в базе данных.
+    * @return список всех авторов/документов из БД.
+    */
+    protected List<Element> checkTable(String tableName){
         //устанавливаем соединение:
         //setConnection(USER, PASSWORD);
         //connection = null;
+        List<Element> list = new ArrayList<>();
         connection = Connector.getConnection();
         
         if(tableName.equals("Authors")){
-            QUERY = "SELECT * FROM Authors";
+            QUERY = "SELECT * FROM Authors ORDER BY auth_id ASC";
         }else if(tableName.equals("Documents"))
-            QUERY = "SELECT * FROM Documents";
+            QUERY = "SELECT * FROM Documents ORDER BY doc_id ASC";
         Statement statement = null;
+        
         try {
             statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
         } catch (SQLException ex) {
-            System.out.println("3: Statement не создано");
+            System.out.println("3: метод checkTable(): Statement не создано");
         }
-            boolean b = false;
+        
+        
+        boolean b = false;
         try {
             b = statement.execute(QUERY);
         } catch (SQLException ex) {
-            System.out.println("4: Statement не execut'нулось");
+            System.out.println("4: метод checkTable(): Statement не execut'нулось");
             System.out.println("ex.getMessage() = " + ex.getMessage());
             ex.printStackTrace();
         }
 
-            if(b){
-                ResultSet rs = null;
-                try {
-                    rs = statement.getResultSet();
-                } catch (SQLException ex) {
-                    System.out.println("5: ResultSet не получен.");
-                }
-                System.out.println("Получили ResultSet (Выборку)");
-                printResult(rs, tableName);
+        
+        if(b){
+            ResultSet rs = null;
+            try {
+                rs = statement.getResultSet();
+            } catch (SQLException ex) {
+                System.out.println("5: метод checkTable(): ResultSet не получен.");
             }
+            System.out.println("5: метод checkTable(): Получили ResultSet (Выборку)");
+            list = printResult(rs, tableName);
+        }
         
         closeConnection();
+        return list;
     }
     
-    //метод вывода полученного resultSet в консоль:
-    private void printResult(ResultSet rs, String tableName){
+    /**
+    * Данный метод вызывается только из метода checkTAble(),
+    * просмотр таблицы авторов/документов.
+    * @param tableName - название таблицы в базе данных.
+    * @return список всех авторов/документов из БД.
+    */
+    //метод получения списка Элементов (Author, Document) из указанной таблицы полученного resultSet:
+    private List<Element> printResult(ResultSet rs, String tableName){
+        List<Element> list = new ArrayList<>();
         try{
             if(rs != null){
                 while (rs.next()){
+                    
                     if(tableName.equals("Authors")){
                         //для таблицы Authors:
-                        System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("auth_name") + ". note = " + rs.getString("auth_note"));
+                        int id = rs.getInt(1);
+                        String name = rs.getString("auth_name");
+                        String note = rs.getString("auth_note");
+                        //System.out.println("id = " + id + ". name = " + name + ". note = " + note);
+                        Author author = new Author(id, name, note);
+                        list.add(author);
                     }else if(tableName.equals("Documents")){
                         //для таблицы Documents:
-                        System.out.println("id = " + rs.getInt(1) + ". name = " + rs.getString("doc_name") + ". text = " + rs.getString("doc_text") + ". date = " + rs.getDate("doc_date") + ". doc_author_id = " + rs.getInt("doc_author_id"));
+                        //int document_id, String title, String text, Date date, int author_id
+                        int id = rs.getInt(1);
+                        String docName = rs.getString("doc_name");
+                        String docText = rs.getString("doc_text");
+                        java.sql.Date sqlDate = rs.getDate("doc_date");
+                        String s = sqlDate.toString();//2008-08-22
+                        int year = Integer.parseInt(s.substring(0, s.indexOf("-")));
+                        int month = Integer.parseInt(s.substring(s.indexOf("-")+1, s.lastIndexOf("-")));
+                        int day = Integer.parseInt(s.substring(s.lastIndexOf("-")));
+                        //int year, int month, int date
+                        Date date = new Date(year, month, day);
+                        int docAuthID = rs.getInt("doc_author_id");
+                        
+                        //System.out.println("id = " + id + ". name = " + docName + ". text = " + docText + ". date = " + sqlDate + ". doc_author_id = " + docAuthID);
+                        Document document = new Document(id, docName, docText, date, docAuthID);
+                        list.add(document);
                     }
                 }
             }
         }catch(SQLException ex){
             System.out.println("5: ResultSet не напечатан. " + ex.getMessage());
         }
+        return list;
     } 
     
     //Усовершенствованный метод вывода полученного resultSet в консоль: используется ResultSetMetaData: просто потренироваться:
@@ -391,11 +441,11 @@ public class DbServer implements  IDbService{
         try {
             if(connection != null && !connection.isClosed()){
                 connection.close();
-                System.out.println("6. Соединение закрыто");
+                System.out.println("6. метод closeConnection(): Соединение закрыто");
             }
         } catch (SQLException ex) {
                 //Logger.getLogger(DataBase.class.getName()).log(Level.SEVERE, null, ex);
-                System.out.println("6: Ошибка закрытия соединения. " + ex.getMessage());
+                System.out.println("6: метод closeConnection(): Ошибка закрытия соединения. " + ex.getMessage());
         }
     }   
     
@@ -426,12 +476,13 @@ public class DbServer implements  IDbService{
     * вспомогательный метод - для получения списка всех заранее подготовленных SQL запросов
     * из файла queries.sql в пакете resources.
     * Выводит список в консоль.
-    * @return список всех заранее подготовленных SQL запросов.
+    * @return словарь(мапу) всех заранее подготовленных SQL запросов.
     */
     protected HashMap<String, String> getQueries(){
         List<String> queries = new ArrayList<>();
        
         Path path = Paths.get("D:\\coding\\politeh\\RuzaevJ130Lab01\\src\\resources\\queries.txt");
+        //Path path = Paths.get("resources/queries.txt");
 
         try(BufferedReader br = new BufferedReader(new FileReader(new File(path.toString())))){
             while(br.ready()){
@@ -439,6 +490,7 @@ public class DbServer implements  IDbService{
             }
         }catch(IOException ex){
             System.out.println("Ошибка чтения из файла resources/queries.txt");
+            ex.printStackTrace();
         }
         
         HashMap<String, String> map = new HashMap<>();
@@ -454,4 +506,14 @@ public class DbServer implements  IDbService{
         return map;
     }
     
+    /**
+    * вспомогательный метод - для получения списка всех заранее подготовленных SQL запросов
+    * из файла queries.sql в пакете resources.
+    * Выводит список в консоль.
+    * @return словарь(мапу) всех заранее подготовленных SQL запросов.
+    */
+    private boolean isElementInTable(Element e, String tableName){
+        List<Element> elements = checkTable("Authors");
+        return elements.contains(e);
+    }
 }

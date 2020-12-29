@@ -21,7 +21,7 @@ import java.util.Objects;
  *
  * @author (C)Y.D.Zakovryashin, 12.11.2020
  */
-public class Document {
+public class Document extends Element{
 
     public static final int VERSION = 267384;
     private final int document_id;
@@ -98,4 +98,14 @@ public class Document {
                 || !Objects.equals(this.title, other.title));
     }
 
+    @Override
+    public String toString(){
+        return "Document: id = " + document_id + ", title = " + title + ", text = " + text + ", date = " + date.getYear() + ", author_id = " + author_id;
+    }
+    
+//    private final int document_id;
+//    private String title;
+//    private String text;
+//    private Date date;
+//    private int author_id;
 }

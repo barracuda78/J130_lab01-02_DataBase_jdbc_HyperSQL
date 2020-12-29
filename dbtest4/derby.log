@@ -1,21 +1,7 @@
-Mon Dec 28 23:53:10 AST 2020 : Сетевой сервер Apache Derby Network Server - 10.9.1.0 - (1344872) запущен и готов принимать соединения на порту 1527 на {3} 
+Tue Dec 29 16:55:08 AST 2020 : Сетевой сервер Apache Derby Network Server - 10.9.1.0 - (1344872) запущен и готов принимать соединения на порту 1527 на {3} 
 ----------------------------------------------------------------
-Mon Dec 28 23:53:10 AST 2020:
- Производится загрузка Derby версии The Apache Software Foundation - Apache Derby - 10.9.1.0 - (1344872): экземпляр a816c00e-0176-ab20-50d9-ffff9cdf1d4a
-в каталоге базы данных D:\coding\politeh\RuzaevJ130Lab01\dbtest4\test4  sun.misc.Launcher$AppClassLoader@6f94fa3e 
-
-java.vendor=Oracle Corporation
-java.runtime.version=1.8.0_111-b14
-user.dir=C:\glassfish4\javadb
-derby.system.home=D:\coding\politeh\RuzaevJ130Lab01\dbtest4
-Запущен загрузчик классов базы данных - derby.database.classpath=''
-----------------------------------------------------------------
-Mon Dec 28 23:53:21 AST 2020:
-Завершается работа экземпляра a816c00e-0176-ab20-50d9-ffff9cdf1d4a
-Mon Dec 28 23:53:21 AST 2020 Thread[DRDAConnThread_3,5,main] (DATABASE = test4), (DRDAID = {2}), База данных 'test4' завершила работу.
-----------------------------------------------------------------
-Mon Dec 28 23:56:21 AST 2020:
- Производится загрузка Derby версии The Apache Software Foundation - Apache Derby - 10.9.1.0 - (1344872): экземпляр 45b300a8-0176-ab20-50d9-ffff9cdf1d4a
+Tue Dec 29 16:55:08 AST 2020:
+ Производится загрузка Derby версии The Apache Software Foundation - Apache Derby - 10.9.1.0 - (1344872): экземпляр a816c00e-0176-aec7-f386-ffff9cdf1d4a
 в каталоге базы данных D:\coding\politeh\RuzaevJ130Lab01\dbtest4\test4  sun.misc.Launcher$AppClassLoader@6f94fa3e 
 
 java.vendor=Oracle Corporation

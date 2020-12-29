@@ -7,14 +7,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-
 /*
 Утилитарный класс для загрузки драйвера, получения параметров соединения из файла .properties и создания соединения.
 Используется в конструкторе класса DbServer;
 */
 public class Connector {
     private static Connection connection;
-    
     
     //метод для получения параметров подключения:
     protected static Properties getProperties(){
@@ -27,11 +25,9 @@ public class Connector {
         }
         
         System.out.println("Параметры подключения:");
-
-        
         return properties;
     }
-    
+
     //метод для получения соединения:
     public static Connection getConnection(){
         try {
@@ -57,11 +53,9 @@ public class Connector {
                 System.out.println("Ошибка получения соединения");
             }
         }
-        
-
         return connection;
     }
-    
+
     //метод для загрузки драйвера:
     private static boolean loadDriver(){
         try {
@@ -74,5 +68,4 @@ public class Connector {
             return false;
         }
     }
-    
 }
