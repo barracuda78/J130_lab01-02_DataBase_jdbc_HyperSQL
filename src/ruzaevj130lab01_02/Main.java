@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 public class Main {
     public static void main(String[] args) {
         DbServer db = new DbServer();
-        Author jv = new Author(777, "Jules Verne", "favorite");
+        Author jv = new Author(777, "Jules Verne", "not my favorite");
         //Author jv = new Author(0, "Jules Verne", "not my favorite");
         //int document_id, String title, String text, Date date, int author_id
         Date deti_granta_date = new Date(1867, 8, 11);
@@ -69,6 +69,15 @@ public class Main {
 //        } catch (DocumentException ex) {
 //            System.out.println("ошибка в методе findDocumentByContent(): " + ex.getMessage());
 //        }
+
+
+        //Тестирование метода deleteAuthor(Author author)
+        try {
+            System.out.println("Удаление автора по объекту Автор: ");
+            System.out.println("Автор удален: " + db.deleteAuthor(jv));
+        } catch (DocumentException ex) {
+            System.out.println("ошибка в методе findDocumentByContent(): " + ex.getMessage());
+        }
 
         
 //        //Содержимое таблицы Authors:

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
@@ -287,14 +289,14 @@ public class DbServer implements  IDbService{
         //1. Если auth_id не 0 - ищем по ID (принимаю, что если auth_id == 0 - поле auth_id не заполнено)
         if(author.getAuthor_id() != 0){
             //1.1. Драйвер загружен в конструкторе.
-            //1.2. Соединение создано в конструкторе
-            //1.3. Создаю препередСтейтмент:
             try{
-            //connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе.
+            //1.2. Соединение создано:
+            connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе. Но уже может быть закрыто.
             QUERY = "SELECT Documents.doc_id, Documents.doc_name, Documents.doc_text, Documents.doc_date, Documents.doc_author_id "
                     + "FROM Documents INNER JOIN Authors "
                     + "ON (Documents.doc_author_id = Authors.auth_id) "
                     + "WHERE Authors.auth_id = ?";
+            //1.3. Создаю препередСтейтмент:
             pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
             pst.setInt(1, author.getAuthor_id());
             }catch(SQLException ex){
@@ -450,9 +452,158 @@ public class DbServer implements  IDbService{
         return documents;
     }
 
+    /**
+    * Метод удаляет автора из базы данных. Вместе с автором удаляются и все
+    * документы, которые ссылаются на удаляемого автора. 
+    * @param author удаляемый автор. Объект может содержать неполные данные автора, например, только идентификатор автора.
+    * @return значение true, если запись автора успешно удалена, и значение false - в противном случае.
+    * @throws DocumentException выбрасывается в случае, если поля объекта author заполнены неправильно 
+    * или ссылка author равна null, а также случае общей ошибки доступа к базе данных.
+    */    
     @Override
     public boolean deleteAuthor(Author author) throws DocumentException {
-        throw new DocumentException();
+        if(author == null || author.getAuthor() == null || "".equals(author.getAuthor())){
+            throw new DocumentException();
+        }
+        boolean b = false;
+        
+        //1. Если у автора заполнен id (если == 0 - считаем не заполнен) - то удаляем все его документы по его id и удаляем автора по id.
+        if(author.getAuthor_id() != 0){
+            //1.1. Драйвер загружен в конструкторе.
+            try{
+            //1.2. Соединение создано:
+            connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе. Но уже может быть закрыто.
+
+            QUERY = "DELETE FROM Documents WHERE doc_author_id = ?";
+            //1.3.DOC: Создаю препередСтейтмент:
+            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setInt(1, author.getAuthor_id());
+            }catch(SQLException ex){
+                System.out.println("Метод deleteAuthor(Author author)://1.3.DOC: Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.4.DOC: Выполняю препередСтейтмент:
+            try {
+                pst.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://1.4.DOC: Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.5.DOC: Получаю количество удаленных записей из таблицы Documents:
+            int n = 0;
+            try {
+                n = pst.getUpdateCount();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://1.5.DOC: Ошибка execute getUpdateCount()");
+                ex.printStackTrace();
+            }
+            System.out.println("Количество удаленных Документов: = " + n);
+            
+            
+            QUERY = "DELETE FROM Authors WHERE auth_id = ?";
+            //1.3.AUTH: Создаю препередСтейтмент:
+            PreparedStatement pst2 = null;   //создаю еще один объект PreparedStatement, потому что pst уже использован и  умер.    
+            try{
+                pst2 = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                pst2.setInt(1, author.getAuthor_id());
+            }catch(SQLException ex){
+                System.out.println("Метод deleteAuthor(Author author)://1.3.AUTH: Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.4.AUTH: Выполняю препередСтейтмент:
+            try {
+                pst2.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://1.4.AUTH: Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //1.5.AUTH: Получаю количество удаленных записей из таблицы Documents:
+            int m = 0;
+            try {
+                m = pst2.getUpdateCount();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://1.5.AUTH: Ошибка execute getUpdateCount()");
+                ex.printStackTrace();
+            }
+            System.out.println("Количество удаленных Авторов: = " + m);           
+            b = m > 0;
+        }
+        
+        
+        //2. Иначе удаляем все документы по имени автора и самого автора удаляем по имени.
+        else{
+            //2.1. Драйвер загружен в конструкторе.
+            try{
+            //2.2. Соединение создано:
+            connection = Connector.getConnection(); //---------------------------------> вызывается в конструкторе. Но уже может быть закрыто.
+            //упс.. а тут все равно по id... по тому что он всегда есть - поумолчанию это поле автора инициализируется нулем.)
+            int auth_id = author.getAuthor_id();
+            QUERY = "DELETE FROM Documents WHERE doc_author_id = ?";
+            //2.3.DOC: Создаю препередСтейтмент:
+            pst = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setInt(1, auth_id);
+            }catch(SQLException ex){
+                System.out.println("Метод deleteAuthor(Author author)://2.3.DOC: Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.4.DOC: Выполняю препередСтейтмент:
+            try {
+                pst.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://2.4.DOC: Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.5.DOC: Получаю количество удаленных записей из таблицы Documents:
+            int n = 0;
+            try {
+                n = pst.getUpdateCount();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://2.5.DOC: Ошибка execute getUpdateCount()");
+                ex.printStackTrace();
+            }
+            System.out.println("Количество удаленных Документов: = " + n);
+            
+            
+            QUERY = "DELETE FROM Authors WHERE auth_name = ?";
+            //2.3.AUTH: Создаю препередСтейтмент:
+            PreparedStatement pst2 = null; //создаю еще один объект PreparedStatement, потому что pst уже использован и  умер.  
+            try{
+            pst2 = connection.prepareStatement(QUERY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst2.setString(1, author.getAuthor());
+            }catch(SQLException ex){
+                System.out.println("Метод deleteAuthor(Author author)://2.3.AUTH: Ошибка создания preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.4.AUTH: Выполняю препередСтейтмент:
+            try {
+                pst2.execute();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://2.4.AUTH: Ошибка execute preparedStatement");
+                ex.printStackTrace();
+            }
+            
+            //2.5.DOC: Получаю количество удаленных записей из таблицы Documents:
+            int m = 0;
+            try {
+                m = pst2.getUpdateCount();
+            } catch (SQLException ex) {
+                System.out.println("Метод deleteAuthor(Author author)://2.5.AUTH: Ошибка execute getUpdateCount()");
+                ex.printStackTrace();
+            }
+            System.out.println("Количество удаленных Авторов: = " + m);           
+            b = m > 0;
+        }
+        
+        //6. закрываю соединение.
+        closeConnection();
+        return b;
     }
 
     @Override
