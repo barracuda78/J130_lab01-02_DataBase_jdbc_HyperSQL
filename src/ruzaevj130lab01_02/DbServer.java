@@ -606,9 +606,30 @@ public class DbServer implements  IDbService{
         return b;
     }
 
+    /**
+    * Метод удаляет автора из базы данных по его  идентификатору. Всесте с
+    * автором удаляются и все документы, которые ссылаются на удаляемого
+    * автора.
+    *
+    * @param id идентификатор удаляемого автора.
+    * @return значение true, если запись автора успешно удалена, и значение
+    * false - в противном случае.
+    * @throws DocumentException выбрасывается в случае общей ошибки доступа к
+    * базе данных.
+    */    
+    
     @Override
     public boolean deleteAuthor(int id) throws DocumentException {
-        throw new DocumentException();
+        List<Element> list = checkTable("Authors");
+        Author author = null;
+        for(Element e : list){
+            if(((Author)e).getAuthor_id() == id){
+                author = (Author)e;
+            }
+        }
+        
+        //throw new DocumentException(); //----------> нужное исключение бросится методдом deleteAuthor(author) в следующей строчке:
+        return deleteAuthor(author);
     }
     
     ///////////////////////////////////////////вспомогательные методы://////////////////////////////////////////
